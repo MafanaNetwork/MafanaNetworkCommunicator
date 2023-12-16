@@ -12,6 +12,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class ProxyPlayer {
@@ -36,6 +38,22 @@ public class ProxyPlayer {
 
     public String getServerName() {
         return serverName;
+    }
+
+    public List<String> getPlayerValues() {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().getAllPlayerValues(getPlayer());
+    }
+
+    public boolean hasPlayerValue(String value) {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().hasPlayerValue(getPlayer(), value);
+    }
+
+    public void removePlayerValue(String value) {
+        MafanaNetworkCommunicator.getInstance().getPlayerDatabase().removePlayerValue(getPlayer(), value);
+    }
+
+    public void addPlayerValue(String value) {
+        MafanaNetworkCommunicator.getInstance().getPlayerDatabase().addPlayerValue(getPlayer(), value);
     }
 
     public void sendMessage(String message) {

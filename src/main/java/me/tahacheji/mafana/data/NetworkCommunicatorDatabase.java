@@ -24,6 +24,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
         if(!sqlGetter.exists(uuid)) {
           sqlGetter.setString(new MysqlValue("SERVER_NAME", uuid, serverName));
           sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", uuid, ""));
+          sqlGetter.setString(new MysqlValue("SERVER_VALUES", uuid, ""));
           sqlGetter.setString(new MysqlValue("TASKS", uuid, ""));
         }
     }
@@ -54,8 +55,6 @@ public class NetworkCommunicatorDatabase extends MySQL {
         }
         return null;
     }
-
-
 
     public void registerOnlinePlayer(Player player) {
         UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
@@ -172,6 +171,50 @@ public class NetworkCommunicatorDatabase extends MySQL {
         return null;
     }
 
+    public void addServerValue(UUID serverId, String value) {
+        List<String> x = new ArrayList<>();
+        if(getAllServerValues(serverId) != null) {
+            x.addAll(getAllServerValues(serverId));
+        }
+        x.add(value);
+        setServerValues(serverId, x);
+    }
+
+    public void removeServerValue(UUID serverId, String value) {
+        String m = null;
+        List<String> x = new ArrayList<>();
+        if(getAllServerValues(serverId) != null) {
+            x.addAll(getAllServerValues(serverId));
+        }
+        for(String s : x) {
+            if(s.equalsIgnoreCase(value)) {
+                m = s;
+            }
+        }
+        x.remove(m);
+        setServerValues(serverId, x);
+    }
+
+    public boolean hasServerValue(UUID serverId, String value) {
+        for(String s : getAllServerValues(serverId)) {
+            if(s.equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<String> getAllServerValues(UUID serverId) {
+        String tasksJson = sqlGetter.getString(serverId, new MysqlValue("SERVER_VALUES"));
+        Gson gson = new Gson();
+        return gson.fromJson(tasksJson, new TypeToken<List<String>>() {}.getType());
+    }
+
+    public void setServerValues(UUID serverId, List<String> serverValues) {
+        Gson gson = new Gson();
+        sqlGetter.setString(new MysqlValue("SERVER_VALUES", serverId, gson.toJson(serverValues)));
+    }
+
     public void setAllConnectedPlayers(UUID serverId, List<ProxyPlayer> x) {
         Gson gson = new Gson();
         sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", serverId, gson.toJson(x)));
@@ -184,6 +227,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
         if (this.isConnected()) sqlGetter.createTable("mafana_network_communicator",
                 new MysqlValue("SERVER_NAME", ""),
                 new MysqlValue("ONLINE_PLAYERS", ""),
+                new MysqlValue("SERVER_VALUES", ""),
                 new MysqlValue("TASKS", ""));
     }
 

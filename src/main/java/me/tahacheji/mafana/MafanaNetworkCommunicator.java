@@ -30,12 +30,15 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
 
 
     private NetworkCommunicatorDatabase networkCommunicatorDatabase;
+    private PlayerDatabase playerDatabase;
     private static MafanaNetworkCommunicator instance;
 
     @Override
     public void onEnable() {
         instance = this;
         networkCommunicatorDatabase = new NetworkCommunicatorDatabase();
+        playerDatabase = new PlayerDatabase();
+        playerDatabase.connect();
         networkCommunicatorDatabase.connect();
         new ServerInformation().createServerId(this);
         networkCommunicatorDatabase.clearAllPlayer(getServerId());
@@ -55,6 +58,7 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
     @Override
     public void onDisable() {
         networkCommunicatorDatabase.disconnect();
+        playerDatabase.disconnect();
         this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
     }
 
@@ -94,6 +98,9 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
         MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getNetworkCommunicatorDatabase().getServerID(server), networkTask);
     }
 
+    public PlayerDatabase getPlayerDatabase() {
+        return playerDatabase;
+    }
 
     public UUID getServerId() {
         return new ServerInformation().getServerId(this);
