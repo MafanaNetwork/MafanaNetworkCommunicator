@@ -22,8 +22,20 @@ public class PlayerDatabase extends MySQL {
         UUID uuid = player.getUniqueId();
         if(!sqlGetter.exists(player.getUniqueId())) {
             sqlGetter.setString(new MysqlValue("PLAYER_NAME", uuid, player.getName()));
+            sqlGetter.setString(new MysqlValue("OFFLINE_PROXY_PLAYER", uuid, ""));
             sqlGetter.setString(new MysqlValue("PLAYER_VALUES", uuid, ""));
         }
+    }
+
+    public void setOfflineProxyPlayer(UUID uuid, OfflineProxyPlayer offlineProxyPlayer) {
+        Gson gson = new Gson();
+        sqlGetter.setString(new MysqlValue("OFFLINE_PROXY_PLAYER", uuid, gson.toJson(offlineProxyPlayer)));
+    }
+
+    public OfflineProxyPlayer getOfflineProxyPlayer(UUID uuid) {
+        Gson gson = new Gson();
+        String x = sqlGetter.getString(uuid, new MysqlValue("OFFLINE_PROXY_PLAYER"));
+        return gson.fromJson(x, new TypeToken<OfflineProxyPlayer>() {}.getType());
     }
 
     public void addPlayerValue(OfflinePlayer player, String value) {
@@ -75,6 +87,7 @@ public class PlayerDatabase extends MySQL {
         super.connect();
         if (this.isConnected()) sqlGetter.createTable("mafana_player_database",
                 new MysqlValue("PLAYER_NAME", ""),
+                new MysqlValue("OFFLINE_PROXY_PLAYER", ""),
                 new MysqlValue("PLAYER_VALUES", ""));
     }
 

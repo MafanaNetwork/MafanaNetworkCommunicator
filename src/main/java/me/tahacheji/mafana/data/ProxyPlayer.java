@@ -18,18 +18,28 @@ import java.util.UUID;
 
 public class ProxyPlayer {
 
-    private String player;
+    private String playerUUID;
+    private String playerName;
     private String serverID;
     private String serverName;
 
-    public ProxyPlayer(String player, String serverID, String serverName) {
-        this.player = player;
+    public ProxyPlayer(String playerUUID, String playerName, String serverID, String serverName) {
+        this.playerUUID = playerUUID;
+        this.playerName = playerName;
         this.serverID = serverID;
         this.serverName = serverName;
     }
 
     public OfflinePlayer getPlayer() {
-        return Bukkit.getOfflinePlayer(UUID.fromString(player));
+        return Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
+    }
+
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    public String getPlayerUUID() {
+        return playerUUID;
     }
 
     public UUID getServerID() {
@@ -67,19 +77,16 @@ public class ProxyPlayer {
     }
 
     public void connectPlayerToServer(String serverName) {
-        OfflinePlayer b = Bukkit.getOfflinePlayer(UUID.fromString(player));
-        if(b != null) {
             ByteArrayOutputStream x = new ByteArrayOutputStream();
             DataOutput m = new DataOutputStream(x);
             try {
                 m.writeUTF("ConnectOther");
-                m.writeUTF(b.getName());
+                m.writeUTF(getPlayerName());
                 m.writeUTF(serverName);
             } catch (IOException e) {
                 e.printStackTrace();
             }
             Player n = Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
             n.sendPluginMessage(MafanaNetworkCommunicator.getInstance(), "BungeeCord", x.toByteArray());
-        }
     }
 }

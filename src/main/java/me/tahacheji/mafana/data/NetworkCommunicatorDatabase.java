@@ -61,7 +61,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
         if(serverId != null && sqlGetter.exists(serverId)) {
             String serverName = sqlGetter.getString(serverId, new MysqlValue("SERVER_NAME"));
             UUID playerUUID = player.getUniqueId();
-            ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), serverId.toString(), serverName);
+            ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName);
             List<ProxyPlayer> m = getAllConnectedPlayers(serverId);
             m.add(x);
             setAllConnectedPlayers(serverId, m);
