@@ -19,12 +19,17 @@ public class NetworkCommunicatorDatabase extends MySQL {
         super("162.254.145.231", "3306", "51252", "51252", "346a1ef0fc");
     }
 
-    public void registerServer(String serverName) {
+    public void registerServer(String serverName, String n) {
         UUID uuid = MafanaNetworkCommunicator.getInstance().getServerId();
         if(!sqlGetter.exists(uuid)) {
           sqlGetter.setString(new MysqlValue("SERVER_NAME", uuid, serverName));
           sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", uuid, ""));
           sqlGetter.setString(new MysqlValue("SERVER_VALUES", uuid, ""));
+          if(n != null) {
+              sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, n));
+          } else {
+              sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, ""));
+          }
           sqlGetter.setString(new MysqlValue("TASKS", uuid, ""));
         }
     }
@@ -33,6 +38,14 @@ public class NetworkCommunicatorDatabase extends MySQL {
         if(sqlGetter.exists(uuid)) {
             sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", uuid, ""));
         }
+    }
+
+    public String getServerNickName(ProxyPlayer proxyPlayer) {
+        return sqlGetter.getString(proxyPlayer.getServerID(), new MysqlValue("SERVER_NICKNAME"));
+    }
+
+    public void setServerNickName(ProxyPlayer proxyPlayer, String n) {
+        sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", proxyPlayer.getServerID(), n));
     }
 
     public void clearAllTasks(UUID uuid) {
