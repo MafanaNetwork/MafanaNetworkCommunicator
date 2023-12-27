@@ -44,8 +44,16 @@ public class NetworkCommunicatorDatabase extends MySQL {
         return sqlGetter.getString(proxyPlayer.getServerID(), new MysqlValue("SERVER_NICKNAME"));
     }
 
+    public String getServerNickName(UUID uuid) {
+        return sqlGetter.getString(uuid, new MysqlValue("SERVER_NICKNAME"));
+    }
+
     public void setServerNickName(ProxyPlayer proxyPlayer, String n) {
         sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", proxyPlayer.getServerID(), n));
+    }
+
+    public void setServerNickName(UUID uuid, String n) {
+        sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, n));
     }
 
     public void clearAllTasks(UUID uuid) {
