@@ -27,6 +27,24 @@ public class RegisterServerCommand {
         }
     }
 
+    @Command(names = "mnc addValue", permission = "mafana.admin", playerOnly = true)
+    public void addServerValue(CommandSender sender, @Param(name = "value") String value) {
+        Player player = (Player) sender;
+        ProxyPlayer proxyPlayer = MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().getProxyPlayer(player);
+        if(proxyPlayer != null) {
+            MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addServerValue(proxyPlayer.getServerID(), value);
+        }
+    }
+
+    @Command(names = "mnc removeValue", permission = "mafana.admin", playerOnly = true)
+    public void removeServerValue(CommandSender sender, @Param(name = "value") String value) {
+        Player player = (Player) sender;
+        ProxyPlayer proxyPlayer = MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().getProxyPlayer(player);
+        if(proxyPlayer != null) {
+            MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().removeServerValue(proxyPlayer.getServerID(), value);
+        }
+    }
+
 
 
 }

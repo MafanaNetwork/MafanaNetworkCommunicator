@@ -241,6 +241,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
                 new MysqlValue("SERVER_NAME", ""),
                 new MysqlValue("ONLINE_PLAYERS", ""),
                 new MysqlValue("SERVER_VALUES", ""),
+                new MysqlValue("SERVER_NICKNAME", ""),
                 new MysqlValue("TASKS", ""));
     }
 
