@@ -192,6 +192,15 @@ public class NetworkCommunicatorDatabase extends MySQL {
         return null;
     }
 
+    public ProxyPlayer getProxyPlayer(UUID uuid) {
+        for(ProxyPlayer proxyPlayer : getAllConnectedPlayers()) {
+            if(proxyPlayer.getPlayer().getUniqueId().equals(uuid)) {
+                return proxyPlayer;
+            }
+        }
+        return null;
+    }
+
     public void addServerValue(UUID serverId, String value) {
         List<String> x = new ArrayList<>();
         if(getAllServerValues(serverId) != null) {
