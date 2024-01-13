@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public class NetworkCommunicatorDatabase extends MySQL {
@@ -32,6 +33,66 @@ public class NetworkCommunicatorDatabase extends MySQL {
           }
           sqlGetter.setString(new MysqlValue("TASKS", uuid, ""));
         }
+    }
+
+    public Server getCombinedServerFromNickName(String x) {
+        String serverName = "NULL";
+        List<ProxyPlayer> onlinePlayers = new ArrayList<>();
+        List<String> serverValues = new ArrayList<>();
+        for(Server s : getAllServers()) {
+            if(Objects.equals(serverName, "NULL")) {
+                serverName = s.getServerID();
+            }
+            onlinePlayers.addAll(s.getOnlinePlayers());
+            serverValues.addAll(s.getServerValues());
+        }
+        return new Server(serverName, onlinePlayers, serverValues, x);
+    }
+
+    public Server getRandomServerFromNickName(String x) {
+        for(Server server : getAllServers()) {
+            if(server.getServerNickName().equalsIgnoreCase(x)) {
+                return server;
+            }
+        }
+        return null;
+    }
+
+    public Server getServerFromID(String x) {
+        for(Server server : getAllServers()) {
+            if(server.getServerID().equalsIgnoreCase(x)) {
+                return server;
+            }
+        }
+        return null;
+    }
+
+    public List<Server> getAllServers() {
+        List<Server> servers = new ArrayList<>();
+        try {
+            List<UUID> uuids = sqlGetter.getAllUUID(new MysqlValue("UUID"));
+            List<String> serverNames = sqlGetter.getAllString(new MysqlValue("SERVER_NAME"));
+            List<String> serverValues = sqlGetter.getAllString(new MysqlValue("SERVER_VALUES"));
+            List<String> serverNicknames = sqlGetter.getAllString(new MysqlValue("SERVER_NICKNAME"));
+
+            for (int i = 0; i < uuids.size(); i++) {
+                UUID uuid = uuids.get(i);
+                String serverName = serverNames.get(i);
+                String serverValuesJson = serverValues.get(i);
+                String serverNickname = serverNicknames.get(i);
+
+                Gson gson = new Gson();
+
+                List<ProxyPlayer> onlinePlayers = getAllConnectedPlayers(uuid);
+                List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
+
+                Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
+                servers.add(server);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return servers;
     }
 
     public void clearAllPlayer(UUID uuid) {
