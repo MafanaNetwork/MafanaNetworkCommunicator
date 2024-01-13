@@ -145,6 +145,16 @@ public class NetworkCommunicatorDatabase extends MySQL {
         return proxyPlayers;
     }
 
+    public ProxyPlayer getProxyPlayer(String name) {
+        ProxyPlayer player = null;
+        for(ProxyPlayer offlineProxyPlayer : getAllConnectedPlayers()) {
+            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+                player = offlineProxyPlayer;
+            }
+        }
+        return player;
+    }
+
     public void unregisterOnlinePlayer(Player player) {
         UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
         if (serverId != null && sqlGetter.exists(serverId)) {

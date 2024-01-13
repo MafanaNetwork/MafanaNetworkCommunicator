@@ -32,10 +32,41 @@ public class PlayerDatabase extends MySQL {
         sqlGetter.setString(new MysqlValue("OFFLINE_PROXY_PLAYER", uuid, gson.toJson(offlineProxyPlayer)));
     }
 
+    public OfflineProxyPlayer getOfflineProxyPlayer(String name) {
+        OfflineProxyPlayer player = null;
+        for(OfflineProxyPlayer offlineProxyPlayer : getAllOfflineProxyPlayers()) {
+            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+                player = offlineProxyPlayer;
+            }
+        }
+        return player;
+    }
+
     public OfflineProxyPlayer getOfflineProxyPlayer(UUID uuid) {
         Gson gson = new Gson();
         String x = sqlGetter.getString(uuid, new MysqlValue("OFFLINE_PROXY_PLAYER"));
         return gson.fromJson(x, new TypeToken<OfflineProxyPlayer>() {}.getType());
+    }
+
+    public List<OfflineProxyPlayer> getAllOfflineProxyPlayers() {
+        List<OfflineProxyPlayer> offlineProxyPlayers = new ArrayList<>();
+        try {
+            List<String> offlinePlayerStrings = sqlGetter.getAllString(new MysqlValue("OFFLINE_PROXY_PLAYER"));
+
+            if (offlinePlayerStrings != null) {
+                Gson gson = new Gson();
+                for (String s : offlinePlayerStrings) {
+                    OfflineProxyPlayer offlineProxyPlayer = gson.fromJson(s, new TypeToken<OfflineProxyPlayer>() {}.getType());
+
+                    if (offlineProxyPlayer != null) {
+                        offlineProxyPlayers.add(offlineProxyPlayer);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return offlineProxyPlayers;
     }
 
     public void addPlayerValue(OfflinePlayer player, String value) {
