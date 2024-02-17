@@ -1,3 +1,4 @@
+depend: [MafanaDatabaseAPI]
 name: MafanaNetworkCommunicator
 version: '${project.version}'
 main: me.tahacheji.mafana.MafanaNetworkCommunicator

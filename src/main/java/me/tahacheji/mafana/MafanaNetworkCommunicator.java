@@ -65,37 +65,53 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
     private void executeNetworkTasks() {
         MafanaNetworkCommunicator pluginInstance = MafanaNetworkCommunicator.getInstance();
         UUID serverId = pluginInstance.getServerId();
-        List<NetworkTask> tasks = new ArrayList<>();
-
-        if (networkCommunicatorDatabase.getNetworkTasks(serverId) != null) {
-            tasks.addAll(networkCommunicatorDatabase.getNetworkTasks(serverId));
-        }
-
-        for (NetworkTask task : tasks) {
-            Bukkit.getScheduler().runTask(pluginInstance, () -> {
-                if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.CONSOLE_PREFORM_COMMAND))) {
-                    Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), task.getTask());
-                } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.PLAYER_PREFORM_COMMAND))) {
-                    Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
-                    if (player != null) {
-                        player.performCommand(task.getTask());
-                    }
-                } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.SENDING_PLAYER_MESSAGE))) {
-                    Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
-                    if (player != null) {
-                        player.sendMessage(task.getTask());
-                    }
+        networkCommunicatorDatabase.getAllNetworkTasksAsync(serverId).thenAccept(tasks -> {
+            if (tasks != null) {
+                for (NetworkTask task : tasks) {
+                    Bukkit.getScheduler().runTask(pluginInstance, () -> {
+                        if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.CONSOLE_PREFORM_COMMAND))) {
+                            Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), task.getTask());
+                        } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.PLAYER_PREFORM_COMMAND))) {
+                            Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
+                            if (player != null) {
+                                player.performCommand(task.getTask());
+                            }
+                        } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.SENDING_PLAYER_MESSAGE))) {
+                            Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
+                            if (player != null) {
+                                player.sendMessage(task.getTask());
+                            }
+                        }
+                    });
+                    networkCommunicatorDatabase.removeNetworkTask(serverId, task.getTaskID()).join(); // Wait for completion
                 }
-
-            });
-
-            networkCommunicatorDatabase.removeNetworkTask(serverId, task.getTaskID());
-        }
+            }
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
     public void preformConsoleCommand(String server, String command) {
         NetworkTask networkTask = new NetworkTask(Task.CONSOLE_PREFORM_COMMAND.toString(), server, command);
-        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getNetworkCommunicatorDatabase().getServerID(server), networkTask);
+        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase()
+                .getServerIDAsync(server)
+                .thenAccept(serverId -> {
+                    if (serverId != null) {
+                        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase()
+                                .addNetworkTask(serverId, networkTask)
+                                .exceptionally(e -> {
+                                    e.printStackTrace();
+                                    return null;
+                                });
+                    } else {
+                        System.err.println("Server ID not found for server: " + server);
+                    }
+                })
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
     }
 
     public PlayerDatabase getPlayerDatabase() {

@@ -2,7 +2,6 @@ package me.tahacheji.mafana.data;
 
 public class OfflineProxyPlayer {
 
-
     private String playerUUID;
     private String playerName;
     private String playerDisplayName;

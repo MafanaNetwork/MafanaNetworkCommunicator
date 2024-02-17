@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class ProxyPlayer {
 
@@ -50,30 +51,30 @@ public class ProxyPlayer {
         return serverName;
     }
 
-    public List<String> getPlayerValues() {
-        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().getAllPlayerValues(getPlayer());
+    public CompletableFuture<List<String>> getPlayerValues() {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().getAllPlayerValuesAsync(getPlayer());
     }
 
-    public boolean hasPlayerValue(String value) {
-        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().hasPlayerValue(getPlayer(), value);
+    public CompletableFuture<Boolean> hasPlayerValue(String value) {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().hasPlayerValueAsync(getPlayer(), value);
     }
 
-    public void removePlayerValue(String value) {
-        MafanaNetworkCommunicator.getInstance().getPlayerDatabase().removePlayerValue(getPlayer(), value);
+    public CompletableFuture<Void> removePlayerValue(String value) {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().removePlayerValue(getPlayer(), value);
     }
 
-    public void addPlayerValue(String value) {
-        MafanaNetworkCommunicator.getInstance().getPlayerDatabase().addPlayerValue(getPlayer(), value);
+    public CompletableFuture<Void> addPlayerValue(String value) {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().addPlayerValue(getPlayer(), value);
     }
 
-    public void sendMessage(String message) {
+    public CompletableFuture<Void> sendMessage(String message) {
         NetworkTask networkTask = new NetworkTask(Task.SENDING_PLAYER_MESSAGE.toString(), getServerName(), getPlayer().getUniqueId().toString(), message);
-        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
+        return MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
     }
 
-    public void preformCommand(String command) {
+    public CompletableFuture<Void> preformCommand(String command) {
         NetworkTask networkTask = new NetworkTask(Task.PLAYER_PREFORM_COMMAND.toString(), getServerName(), getPlayer().getUniqueId().toString(), command);
-        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
+        return MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
     }
 
     public void connectPlayerToServer(String serverName) {

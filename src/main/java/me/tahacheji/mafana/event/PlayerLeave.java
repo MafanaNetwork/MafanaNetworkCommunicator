@@ -8,14 +8,33 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.concurrent.CompletableFuture;
+
 public class PlayerLeave implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        ProxyPlayer proxyPlayer = MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().getProxyPlayer(player);
-        MafanaNetworkCommunicator.getInstance().getPlayerDatabase().setOfflineProxyPlayer(event.getPlayer().getUniqueId(),
-                new OfflineProxyPlayer(player.getUniqueId().toString(), player.getName(), player.getDisplayName(), proxyPlayer.getServerID().toString(), proxyPlayer.getServerName()));
-        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().unregisterOnlinePlayer(event.getPlayer());
+        CompletableFuture<ProxyPlayer> getProxyPlayerFuture = MafanaNetworkCommunicator.getInstance()
+                .getNetworkCommunicatorDatabase()
+                .getProxyPlayerAsync(player);
+        getProxyPlayerFuture.thenAccept(proxyPlayer -> {
+            if (proxyPlayer != null) {
+                OfflineProxyPlayer offlineProxyPlayer = new OfflineProxyPlayer(
+                        player.getUniqueId().toString(),
+                        player.getName(),
+                        player.getDisplayName(),
+                        proxyPlayer.getServerID().toString(),
+                        proxyPlayer.getServerName()
+                );
+                MafanaNetworkCommunicator.getInstance().getPlayerDatabase().setOfflineProxyPlayer(player.getUniqueId(), offlineProxyPlayer);
+            }
+        }).thenRun(() -> {
+            MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().unregisterOnlinePlayer(player);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
+
 }

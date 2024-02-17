@@ -2,10 +2,8 @@ package me.tahacheji.mafana.data;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import me.TahaCheji.mysqlData.MySQL;
-import me.TahaCheji.mysqlData.MysqlValue;
-import me.TahaCheji.mysqlData.SQLGetter;
 import me.tahacheji.mafana.MafanaNetworkCommunicator;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
@@ -13,324 +11,460 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class NetworkCommunicatorDatabase extends MySQL {
     SQLGetter sqlGetter = new SQLGetter(this);
+
     public NetworkCommunicatorDatabase() {
         super("162.254.145.231", "3306", "51252", "51252", "346a1ef0fc");
     }
 
-    public void registerServer(String serverName, String n) {
+    public CompletableFuture<Void> registerServer(String serverName, String nickname) {
         UUID uuid = MafanaNetworkCommunicator.getInstance().getServerId();
-        if(!sqlGetter.exists(uuid)) {
-          sqlGetter.setString(new MysqlValue("SERVER_NAME", uuid, serverName));
-          sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", uuid, ""));
-          sqlGetter.setString(new MysqlValue("SERVER_VALUES", uuid, ""));
-          if(n != null) {
-              sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, n));
-          } else {
-              sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, ""));
-          }
-          sqlGetter.setString(new MysqlValue("TASKS", uuid, ""));
-        }
-    }
 
-    public Server getCombinedServerFromNickName(String x) {
-        String serverName = "NULL";
-        List<ProxyPlayer> onlinePlayers = new ArrayList<>();
-        List<String> serverValues = new ArrayList<>();
-        for(Server s : getAllServers()) {
-            if(Objects.equals(serverName, "NULL")) {
-                serverName = s.getServerID();
+        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+            if (!exists) {
+                return registerServerAsync(uuid, serverName, nickname);
             }
-            onlinePlayers.addAll(s.getOnlinePlayers());
-            serverValues.addAll(s.getServerValues());
-        }
-        return new Server(serverName, onlinePlayers, serverValues, x);
-    }
-
-    public Server getRandomServerFromNickName(String x) {
-        for(Server server : getAllServers()) {
-            if(server.getServerNickName().equalsIgnoreCase(x)) {
-                return server;
-            }
-        }
-        return null;
-    }
-
-    public Server getServerFromID(String x) {
-        for(Server server : getAllServers()) {
-            if(server.getServerID().equalsIgnoreCase(x)) {
-                return server;
-            }
-        }
-        return null;
-    }
-
-    public List<Server> getAllServers() {
-        List<Server> servers = new ArrayList<>();
-        try {
-            List<UUID> uuids = sqlGetter.getAllUUID(new MysqlValue("UUID"));
-            List<String> serverNames = sqlGetter.getAllString(new MysqlValue("SERVER_NAME"));
-            List<String> serverValues = sqlGetter.getAllString(new MysqlValue("SERVER_VALUES"));
-            List<String> serverNicknames = sqlGetter.getAllString(new MysqlValue("SERVER_NICKNAME"));
-
-            for (int i = 0; i < uuids.size(); i++) {
-                UUID uuid = uuids.get(i);
-                String serverName = serverNames.get(i);
-                String serverValuesJson = serverValues.get(i);
-                String serverNickname = serverNicknames.get(i);
-
-                Gson gson = new Gson();
-
-                List<ProxyPlayer> onlinePlayers = getAllConnectedPlayers(uuid);
-                List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
-
-                Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
-                servers.add(server);
-            }
-        } catch (Exception e) {
+            return CompletableFuture.completedFuture(null);
+        }).exceptionally(e -> {
             e.printStackTrace();
-        }
-        return servers;
+            return null;
+        });
     }
 
-    public void clearAllPlayer(UUID uuid) {
-        if(sqlGetter.exists(uuid)) {
-            sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", uuid, ""));
-        }
+    private CompletableFuture<Void> registerServerAsync(UUID uuid, String serverName, String nickname) {
+        return CompletableFuture.allOf(
+                sqlGetter.setStringAsync(new DatabaseValue("SERVER_NAME", uuid, serverName)),
+                sqlGetter.setStringAsync(new DatabaseValue("ONLINE_PLAYERS", uuid, "")),
+                sqlGetter.setStringAsync(new DatabaseValue("SERVER_VALUES", uuid, "")),
+                sqlGetter.setStringAsync(new DatabaseValue("SERVER_NICKNAME", uuid, (nickname != null) ? nickname : "")),
+                sqlGetter.setStringAsync(new DatabaseValue("TASKS", uuid, ""))
+        ).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public String getServerNickName(ProxyPlayer proxyPlayer) {
-        return sqlGetter.getString(proxyPlayer.getServerID(), new MysqlValue("SERVER_NICKNAME"));
+
+
+    public CompletableFuture<Server> getCombinedServerFromNickNameAsync(String x) {
+        return getAllServersAsync().thenApply(servers -> {
+            String serverName = "NULL";
+            List<ProxyPlayer> onlinePlayers = new ArrayList<>();
+            List<String> serverValues = new ArrayList<>();
+            for (Server s : servers) {
+                if (Objects.equals(serverName, "NULL")) {
+                    serverName = s.getServerID();
+                }
+                onlinePlayers.addAll(s.getOnlinePlayers());
+                serverValues.addAll(s.getServerValues());
+            }
+            return new Server(serverName, onlinePlayers, serverValues, x);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public String getServerNickName(UUID uuid) {
-        return sqlGetter.getString(uuid, new MysqlValue("SERVER_NICKNAME"));
-    }
-
-    public void setServerNickName(ProxyPlayer proxyPlayer, String n) {
-        sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", proxyPlayer.getServerID(), n));
-    }
-
-    public void setServerNickName(UUID uuid, String n) {
-        sqlGetter.setString(new MysqlValue("SERVER_NICKNAME", uuid, n));
-    }
-
-    public void clearAllTasks(UUID uuid) {
-        if(sqlGetter.exists(uuid)) {
-            sqlGetter.setString(new MysqlValue("TASKS", uuid, ""));
-        }
-    }
-
-    public UUID getServerID(String name) {
-        try {
-            List<UUID> uuids = sqlGetter.getAllUUID(new MysqlValue("UUID"));
-            List<String> names = sqlGetter.getAllString(new MysqlValue("SERVER_NAME"));
-            for (int i = 0; i < uuids.size(); i++) {
-                if (names.get(i).equalsIgnoreCase(name)) {
-                    return uuids.get(i);
+    public CompletableFuture<Server> getRandomServerFromNickNameAsync(String x) {
+        return getAllServersAsync().thenApply(servers -> {
+            for (Server server : servers) {
+                if (server.getServerNickName().equalsIgnoreCase(x)) {
+                    return server;
                 }
             }
-        } catch (Exception e) {
+            return null;
+        }).exceptionally(e -> {
             e.printStackTrace();
-        }
-        return null;
+            return null;
+        });
     }
 
-    public void registerOnlinePlayer(Player player) {
-        UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
-        if(serverId != null && sqlGetter.exists(serverId)) {
-            String serverName = sqlGetter.getString(serverId, new MysqlValue("SERVER_NAME"));
-            UUID playerUUID = player.getUniqueId();
-            ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName);
-            List<ProxyPlayer> m = getAllConnectedPlayers(serverId);
-            m.add(x);
-            setAllConnectedPlayers(serverId, m);
-        }
-    }
-
-    public void addNetworkTask(UUID serverId, NetworkTask task) {
-        List<NetworkTask> tasks = new ArrayList<>();
-        if(getNetworkTasks(serverId) != null) {
-            tasks.addAll(getNetworkTasks(serverId));
-        }
-        tasks.add(task);
-        setNetworkTasks(serverId, tasks);
-    }
-
-    public List<NetworkTask> getNetworkTasks(UUID serverId) {
-        String tasksJson = sqlGetter.getString(serverId, new MysqlValue("TASKS"));
-        Gson gson = new Gson();
-        return gson.fromJson(tasksJson, new TypeToken<List<NetworkTask>>() {}.getType());
-    }
-
-    public void setNetworkTasks(UUID serverId, List<NetworkTask> tasks) {
-        Gson gson = new Gson();
-        sqlGetter.setString(new MysqlValue("TASKS", serverId, gson.toJson(tasks)));
-    }
-
-    public void removeNetworkTask(UUID serverId, String taskId) {
-        List<NetworkTask> tasks = new ArrayList<>();
-        if(getNetworkTasks(serverId) != null) {
-            tasks.addAll(getNetworkTasks(serverId));
-        }
-        NetworkTask task = null;
-        for(NetworkTask networkTask : tasks) {
-            if(networkTask.getTaskID().equalsIgnoreCase(taskId)) {
-                task = networkTask;
+    public CompletableFuture<Server> getServerFromIDAsync(String x) {
+        return getAllServersAsync().thenApply(servers -> {
+            for (Server server : servers) {
+                if (server.getServerID().equalsIgnoreCase(x)) {
+                    return server;
+                }
             }
-        }
-        tasks.remove(task);
-        setNetworkTasks(serverId, tasks);
+            return null;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public List<ProxyPlayer> getAllConnectedPlayers() {
-        List<ProxyPlayer> proxyPlayers = new ArrayList<>();
-        try {
-            List<String> proxyString = sqlGetter.getAllString(new MysqlValue("ONLINE_PLAYERS"));
 
-            if (proxyString != null) {
-                Gson gson = new Gson();
-                for (String s : proxyString) {
-                    List<ProxyPlayer> proxyPlayer = gson.fromJson(s, new TypeToken<List<ProxyPlayer>>() {}.getType());
+    public CompletableFuture<List<Server>> getAllServersAsync() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<Server> servers = new ArrayList<>();
+            try {
+                List<UUID> uuids = sqlGetter.getAllUUIDAsync(new DatabaseValue("UUID")).join();
+                List<String> serverNames = sqlGetter.getAllStringAsync(new DatabaseValue("SERVER_NAME")).join();
+                List<String> serverValues = sqlGetter.getAllStringAsync(new DatabaseValue("SERVER_VALUES")).join();
+                List<String> serverNicknames = sqlGetter.getAllStringAsync(new DatabaseValue("SERVER_NICKNAME")).join();
 
-                    if (proxyPlayer != null) {
-                        proxyPlayers.addAll(proxyPlayer);
+                for (int i = 0; i < uuids.size(); i++) {
+                    UUID uuid = uuids.get(i);
+                    String serverName = serverNames.get(i);
+                    String serverValuesJson = serverValues.get(i);
+                    String serverNickname = serverNicknames.get(i);
+
+                    Gson gson = new Gson();
+
+                    List<ProxyPlayer> onlinePlayers = getAllConnectedPlayersAsync(uuid).join();
+                    List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
+
+                    Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
+                    servers.add(server);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return servers;
+        });
+    }
+
+
+    public CompletableFuture<Void> clearAllPlayer(UUID uuid) {
+        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+            if (exists) {
+                return sqlGetter.setStringAsync(new DatabaseValue("ONLINE_PLAYERS", uuid, ""))
+                        .exceptionally(e -> {
+                            e.printStackTrace();
+                            return null;
+                        });
+            }
+            return CompletableFuture.completedFuture(null);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
+    }
+
+
+    public CompletableFuture<String> getServerNickNameAsync(ProxyPlayer proxyPlayer) {
+        return sqlGetter.getStringAsync(proxyPlayer.getServerID(), new DatabaseValue("SERVER_NICKNAME"));
+    }
+
+    public CompletableFuture<String> getServerNickNameAsync(UUID uuid) {
+        return sqlGetter.getStringAsync(uuid, new DatabaseValue("SERVER_NICKNAME"));
+    }
+
+    public CompletableFuture<Void> setServerNickNameAsync(ProxyPlayer proxyPlayer, String n) {
+        return sqlGetter.setStringAsync(new DatabaseValue("SERVER_NICKNAME", proxyPlayer.getServerID(), n))
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
+    }
+
+    public CompletableFuture<Void> setServerNickNameAsync(UUID uuid, String n) {
+        return sqlGetter.setStringAsync(new DatabaseValue("SERVER_NICKNAME", uuid, n))
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
+    }
+
+    public CompletableFuture<Void> clearAllTasks(UUID uuid) {
+        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+            if (exists) {
+                return sqlGetter.setStringAsync(new DatabaseValue("TASKS", uuid, ""))
+                        .exceptionally(e -> {
+                            e.printStackTrace();
+                            return null;
+                        });
+            }
+            return CompletableFuture.completedFuture(null);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
+    }
+
+    public CompletableFuture<UUID> getServerIDAsync(String name) {
+        return sqlGetter.getAllUUIDAsync(new DatabaseValue("UUID")).thenCombine(
+                sqlGetter.getAllStringAsync(new DatabaseValue("SERVER_NAME")),
+                (uuids, names) -> {
+                    for (int i = 0; i < uuids.size(); i++) {
+                        if (names.get(i).equalsIgnoreCase(name)) {
+                            return uuids.get(i);
+                        }
                     }
+                    return null;
                 }
-            }
-        } catch (Exception e) {
+        ).exceptionally(e -> {
             e.printStackTrace();
-        }
-        return proxyPlayers;
+            return null;
+        });
     }
 
-    public ProxyPlayer getProxyPlayer(String name) {
-        ProxyPlayer player = null;
-        for(ProxyPlayer offlineProxyPlayer : getAllConnectedPlayers()) {
-            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
-                player = offlineProxyPlayer;
-            }
-        }
-        return player;
-    }
-
-    public void unregisterOnlinePlayer(Player player) {
+    public CompletableFuture<Void> registerOnlinePlayer(Player player) {
         UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
-        if (serverId != null && sqlGetter.exists(serverId)) {
-            UUID playerUUID = player.getUniqueId();
-            List<ProxyPlayer> m = getAllConnectedPlayers(serverId);
-            ProxyPlayer playerToRemove = null;
-            for(ProxyPlayer proxyPlayer : m) {
-                if(proxyPlayer.getPlayer().getUniqueId().equals(playerUUID)) {
-                    playerToRemove = proxyPlayer;
-                    break;
+        if (serverId != null) {
+            return sqlGetter.existsAsync(serverId).thenCompose(exists -> {
+                if (exists) {
+                    return getServerNickNameAsync(serverId).thenCompose(serverName -> {
+                        UUID playerUUID = player.getUniqueId();
+                        ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName);
+                        return getAllConnectedPlayersAsync(serverId).thenAccept(m -> {
+                            m.add(x);
+                            setAllConnectedPlayersAsync(serverId, m).join();
+                        });
+                    });
+                }
+                return CompletableFuture.completedFuture(null);
+            }).exceptionally(e -> {
+                e.printStackTrace();
+                return null;
+            });
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+
+    public CompletableFuture<Void> addNetworkTask(UUID serverId, NetworkTask task) {
+        return getAllNetworkTasksAsync(serverId).thenCompose(tasks -> {
+            if (tasks != null) {
+                tasks.add(task);
+            } else {
+                tasks = new ArrayList<>();
+                tasks.add(task);
+            }
+            return setNetworkTasksAsync(serverId, tasks);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
+    }
+    public CompletableFuture<List<NetworkTask>> getAllNetworkTasksAsync(UUID serverId) {
+        return sqlGetter.getStringAsync(serverId, new DatabaseValue("TASKS")).thenApply(tasksJson -> {
+            Gson gson = new Gson();
+            return gson.fromJson(tasksJson, new TypeToken<List<NetworkTask>>() {}.getType());
+        });
+    }
+
+    public CompletableFuture<Void> setNetworkTasksAsync(UUID serverId, List<NetworkTask> tasks) {
+        Gson gson = new Gson();
+        return sqlGetter.setStringAsync(new DatabaseValue("TASKS", serverId, gson.toJson(tasks)))
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
+    }
+
+    public CompletableFuture<Void> removeNetworkTask(UUID serverId, String taskId) {
+        return getAllNetworkTasksAsync(serverId).thenCompose(tasks -> {
+            if (tasks != null) {
+                tasks.removeIf(task -> task.getTaskID().equalsIgnoreCase(taskId));
+                return setNetworkTasksAsync(serverId, tasks);
+            }
+            return CompletableFuture.completedFuture(null);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
+    }
+
+
+
+    public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync() {
+        return sqlGetter.getAllStringAsync(new DatabaseValue("ONLINE_PLAYERS")).thenApply(proxyStringList -> {
+            List<ProxyPlayer> proxyPlayers = new ArrayList<>();
+            Gson gson = new Gson();
+            for (String proxyString : proxyStringList) {
+                List<ProxyPlayer> proxyPlayer = gson.fromJson(proxyString, new TypeToken<List<ProxyPlayer>>() {}.getType());
+                if (proxyPlayer != null) {
+                    proxyPlayers.addAll(proxyPlayer);
                 }
             }
-            m.remove(playerToRemove);
-            setAllConnectedPlayers(serverId, m);
-        }
+            return proxyPlayers;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return new ArrayList<>();
+        });
     }
 
 
-    public List<ProxyPlayer> getAllConnectedPlayers(String serverName) {
-        List<ProxyPlayer> proxyPlayers = new ArrayList<>();
-        for(ProxyPlayer proxyPlayer : getAllConnectedPlayers()) {
-            if(proxyPlayer.getServerName().equalsIgnoreCase(serverName)) {
-                proxyPlayers.add(proxyPlayer);
+    public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(String name) {
+        return getAllConnectedPlayersAsync().thenApply(players -> {
+            for (ProxyPlayer offlineProxyPlayer : players) {
+                if (offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+                    return offlineProxyPlayer;
+                }
             }
-        }
-        return proxyPlayers;
+            return null;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public List<ProxyPlayer> getAllConnectedPlayers(UUID serverID) {
-        List<ProxyPlayer> proxyPlayers = new ArrayList<>();
-        for(ProxyPlayer proxyPlayer : getAllConnectedPlayers()) {
-            if(proxyPlayer.getServerID().equals(serverID)) {
-                proxyPlayers.add(proxyPlayer);
+    public CompletableFuture<Void> unregisterOnlinePlayer(Player player) {
+        UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
+        if (serverId != null) {
+            return sqlGetter.existsAsync(serverId).thenCompose(exists -> {
+                if (exists) {
+                    UUID playerUUID = player.getUniqueId();
+                    return getAllConnectedPlayersAsync(serverId).thenCompose(players -> {
+                        ProxyPlayer playerToRemove = null;
+                        for (ProxyPlayer proxyPlayer : players) {
+                            if (proxyPlayer.getPlayer().getUniqueId().equals(playerUUID)) {
+                                playerToRemove = proxyPlayer;
+                                break;
+                            }
+                        }
+                        if (playerToRemove != null) {
+                            players.remove(playerToRemove);
+                            return setAllConnectedPlayersAsync(serverId, players);
+                        }
+                        return CompletableFuture.completedFuture(null);
+                    });
+                }
+                return CompletableFuture.completedFuture(null);
+            }).exceptionally(e -> {
+                e.printStackTrace();
+                return null;
+            });
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync(String serverName) {
+        return getAllConnectedPlayersAsync().thenApply(players -> {
+            List<ProxyPlayer> proxyPlayers = new ArrayList<>();
+            for (ProxyPlayer proxyPlayer : players) {
+                if (proxyPlayer.getServerName().equalsIgnoreCase(serverName)) {
+                    proxyPlayers.add(proxyPlayer);
+                }
             }
-        }
-        return proxyPlayers;
+            return proxyPlayers;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return new ArrayList<>();
+        });
     }
 
-    public ProxyPlayer getProxyPlayer(OfflinePlayer player) {
-        for(ProxyPlayer proxyPlayer : getAllConnectedPlayers()) {
-            if(proxyPlayer.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-                return proxyPlayer;
+    public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync(UUID serverID) {
+        return getAllConnectedPlayersAsync().thenApply(players -> {
+            List<ProxyPlayer> proxyPlayers = new ArrayList<>();
+            for (ProxyPlayer proxyPlayer : players) {
+                if (proxyPlayer.getServerID().equals(serverID)) {
+                    proxyPlayers.add(proxyPlayer);
+                }
             }
-         }
-        return null;
+            return proxyPlayers;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return new ArrayList<>();
+        });
     }
 
-    public ProxyPlayer getProxyPlayer(UUID uuid) {
-        for(ProxyPlayer proxyPlayer : getAllConnectedPlayers()) {
-            if(proxyPlayer.getPlayer().getUniqueId().equals(uuid)) {
-                return proxyPlayer;
+    public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(OfflinePlayer player) {
+        return getAllConnectedPlayersAsync().thenApply(players -> {
+            for (ProxyPlayer proxyPlayer : players) {
+                if (proxyPlayer.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+                    return proxyPlayer;
+                }
             }
-        }
-        return null;
+            return null;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public void addServerValue(UUID serverId, String value) {
-        List<String> x = new ArrayList<>();
-        if(getAllServerValues(serverId) != null) {
-            x.addAll(getAllServerValues(serverId));
-        }
-        x.add(value);
-        setServerValues(serverId, x);
-    }
-
-    public void removeServerValue(UUID serverId, String value) {
-        String m = null;
-        List<String> x = new ArrayList<>();
-        if(getAllServerValues(serverId) != null) {
-            x.addAll(getAllServerValues(serverId));
-        }
-        for(String s : x) {
-            if(s.equalsIgnoreCase(value)) {
-                m = s;
+    public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(UUID uuid) {
+        return getAllConnectedPlayersAsync().thenApply(players -> {
+            for (ProxyPlayer proxyPlayer : players) {
+                if (proxyPlayer.getPlayer().getUniqueId().equals(uuid)) {
+                    return proxyPlayer;
+                }
             }
-        }
-        x.remove(m);
-        setServerValues(serverId, x);
+            return null;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public boolean hasServerValue(UUID serverId, String value) {
-        for(String s : getAllServerValues(serverId)) {
-            if(s.equalsIgnoreCase(value)) {
-                return true;
+    public CompletableFuture<Void> addServerValueAsync(UUID serverId, String value) {
+        return getAllServerValuesAsync(serverId).thenAccept(serverValues -> {
+            if (serverValues != null) {
+                serverValues.add(value);
+            } else {
+                serverValues = new ArrayList<>();
+                serverValues.add(value);
             }
-        }
-        return false;
+            setServerValuesAsync(serverId, serverValues);
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
     }
 
-    public List<String> getAllServerValues(UUID serverId) {
-        String tasksJson = sqlGetter.getString(serverId, new MysqlValue("SERVER_VALUES"));
+    public CompletableFuture<Void> removeServerValueAsync(UUID serverId, String value) {
+        return getAllServerValuesAsync(serverId).thenAccept(serverValues -> {
+            if (serverValues != null) {
+                serverValues.removeIf(s -> s.equalsIgnoreCase(value));
+                setServerValuesAsync(serverId, serverValues);
+            }
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return null;
+        });
+    }
+
+    public CompletableFuture<Boolean> hasServerValueAsync(UUID serverId, String value) {
+        return getAllServerValuesAsync(serverId).thenApply(serverValues -> {
+            if (serverValues != null) {
+                return serverValues.contains(value);
+            }
+            return false;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            return false;
+        });
+    }
+
+    public CompletableFuture<List<String>> getAllServerValuesAsync(UUID serverId) {
+        return sqlGetter.getStringAsync(serverId, new DatabaseValue("SERVER_VALUES")).thenApply(tasksJson -> {
+            Gson gson = new Gson();
+            return gson.fromJson(tasksJson, new TypeToken<List<String>>() {}.getType());
+        });
+    }
+
+    public CompletableFuture<Void> setServerValuesAsync(UUID serverId, List<String> serverValues) {
         Gson gson = new Gson();
-        return gson.fromJson(tasksJson, new TypeToken<List<String>>() {}.getType());
+        return sqlGetter.setStringAsync(new DatabaseValue("SERVER_VALUES", serverId, gson.toJson(serverValues)))
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
     }
 
-    public void setServerValues(UUID serverId, List<String> serverValues) {
+    public CompletableFuture<Void> setAllConnectedPlayersAsync(UUID serverId, List<ProxyPlayer> x) {
         Gson gson = new Gson();
-        sqlGetter.setString(new MysqlValue("SERVER_VALUES", serverId, gson.toJson(serverValues)));
+        return sqlGetter.setStringAsync(new DatabaseValue("ONLINE_PLAYERS", serverId, gson.toJson(x)))
+                .exceptionally(e -> {
+                    e.printStackTrace();
+                    return null;
+                });
     }
-
-    public void setAllConnectedPlayers(UUID serverId, List<ProxyPlayer> x) {
-        Gson gson = new Gson();
-        sqlGetter.setString(new MysqlValue("ONLINE_PLAYERS", serverId, gson.toJson(x)));
-    }
-
 
     @Override
     public void connect() {
         super.connect();
         if (this.isConnected()) sqlGetter.createTable("mafana_network_communicator",
-                new MysqlValue("SERVER_NAME", ""),
-                new MysqlValue("ONLINE_PLAYERS", ""),
-                new MysqlValue("SERVER_VALUES", ""),
-                new MysqlValue("SERVER_NICKNAME", ""),
-                new MysqlValue("TASKS", ""));
+                new DatabaseValue("SERVER_NAME", ""),
+                new DatabaseValue("ONLINE_PLAYERS", ""),
+                new DatabaseValue("SERVER_VALUES", ""),
+                new DatabaseValue("SERVER_NICKNAME", ""),
+                new DatabaseValue("TASKS", ""));
     }
 
 

@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.*;
 import java.lang.reflect.Proxy;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class ServerInformation{
 
@@ -38,6 +39,17 @@ public class ServerInformation{
         }
 
         return null;
+    }
+
+    public CompletableFuture<UUID> getServerIdAsync() {
+        return CompletableFuture.supplyAsync(() -> getServerId(MafanaNetworkCommunicator.getInstance()));
+    }
+
+    public CompletableFuture<UUID> createServerIdAsync(MafanaNetworkCommunicator plugin) {
+        CompletableFuture<UUID> future = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> createServerId(plugin))
+                .thenRun(() -> future.complete(getServerId(plugin)));
+        return future;
     }
 
 
