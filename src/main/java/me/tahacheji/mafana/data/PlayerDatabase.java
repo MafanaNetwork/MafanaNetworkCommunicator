@@ -143,6 +143,38 @@ public class PlayerDatabase extends MySQL {
                 });
     }
 
+    public OfflineProxyPlayer getOfflineProxyPlayerSync(String name) {
+        OfflineProxyPlayer player = null;
+        for(OfflineProxyPlayer offlineProxyPlayer : getAllOfflineProxyPlayerSync()) {
+            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+                player = offlineProxyPlayer;
+            }
+        }
+        return player;
+    }
+
+    public List<OfflineProxyPlayer> getAllOfflineProxyPlayerSync() {
+        List<OfflineProxyPlayer> offlineProxyPlayers = new ArrayList<>();
+        try {
+            List<String> offlinePlayerStrings = sqlGetter.getAllString(new DatabaseValue("OFFLINE_PROXY_PLAYER"));
+
+            if (offlinePlayerStrings != null) {
+                Gson gson = new Gson();
+                for (String s : offlinePlayerStrings) {
+                    OfflineProxyPlayer offlineProxyPlayer = gson.fromJson(s, new TypeToken<OfflineProxyPlayer>() {}.getType());
+
+                    if (offlineProxyPlayer != null) {
+                        offlineProxyPlayers.add(offlineProxyPlayer);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return offlineProxyPlayers;
+    }
+
+
 
     @Override
     public void connect() {

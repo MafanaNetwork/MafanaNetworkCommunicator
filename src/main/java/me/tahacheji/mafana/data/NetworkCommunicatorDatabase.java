@@ -456,6 +456,86 @@ public class NetworkCommunicatorDatabase extends MySQL {
                 });
     }
 
+    public List<ProxyPlayer> getAllConnectedPlayerSync() {
+        List<ProxyPlayer> proxyPlayers = new ArrayList<>();
+        try {
+            List<String> proxyString = sqlGetter.getAllString(new DatabaseValue("ONLINE_PLAYERS"));
+
+            if (proxyString != null) {
+                Gson gson = new Gson();
+                for (String s : proxyString) {
+                    List<ProxyPlayer> proxyPlayer = gson.fromJson(s, new TypeToken<List<ProxyPlayer>>() {}.getType());
+
+                    if (proxyPlayer != null) {
+                        proxyPlayers.addAll(proxyPlayer);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return proxyPlayers;
+    }
+
+    public List<Server> getAllServerSync() {
+        List<Server> servers = new ArrayList<>();
+        try {
+            List<UUID> uuids = sqlGetter.getAllUUID(new DatabaseValue("UUID"));
+            List<String> serverNames = sqlGetter.getAllString(new DatabaseValue("SERVER_NAME"));
+            List<String> serverValues = sqlGetter.getAllString(new DatabaseValue("SERVER_VALUES"));
+            List<String> serverNicknames = sqlGetter.getAllString(new DatabaseValue("SERVER_NICKNAME"));
+
+            for (int i = 0; i < uuids.size(); i++) {
+                UUID uuid = uuids.get(i);
+                String serverName = serverNames.get(i);
+                String serverValuesJson = serverValues.get(i);
+                String serverNickname = serverNicknames.get(i);
+
+                Gson gson = new Gson();
+
+                List<ProxyPlayer> onlinePlayers = getAllConnectedPlayerSync(uuid);
+                List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
+
+                Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
+                servers.add(server);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return servers;
+    }
+
+    public List<ProxyPlayer> getAllConnectedPlayerSync(UUID serverID) {
+        List<ProxyPlayer> proxyPlayers = new ArrayList<>();
+        for(ProxyPlayer proxyPlayer : getAllConnectedPlayerSync()) {
+            if(proxyPlayer.getServerID().equals(serverID)) {
+                proxyPlayers.add(proxyPlayer);
+            }
+        }
+        return proxyPlayers;
+    }
+
+    public ProxyPlayer getProxyPlayer(String name) {
+        ProxyPlayer player = null;
+        for(ProxyPlayer offlineProxyPlayer : getAllConnectedPlayerSync()) {
+            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+                player = offlineProxyPlayer;
+            }
+        }
+        return player;
+    }
+
+
+
+    public Server getServerFromID(String x) {
+        for(Server server : getAllServerSync()) {
+            if(server.getServerID().equalsIgnoreCase(x)) {
+                return server;
+            }
+        }
+        return null;
+    }
+
     @Override
     public void connect() {
         super.connect();
