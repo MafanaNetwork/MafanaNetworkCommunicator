@@ -156,7 +156,7 @@ public class PlayerDatabase extends MySQL {
     public List<OfflineProxyPlayer> getAllOfflineProxyPlayerSync() {
         List<OfflineProxyPlayer> offlineProxyPlayers = new ArrayList<>();
         try {
-            List<String> offlinePlayerStrings = sqlGetter.getAllString(new DatabaseValue("OFFLINE_PROXY_PLAYER"));
+            List<String> offlinePlayerStrings = sqlGetter.getAllStringSync(new DatabaseValue("OFFLINE_PROXY_PLAYER"));
 
             if (offlinePlayerStrings != null) {
                 Gson gson = new Gson();
@@ -173,8 +173,6 @@ public class PlayerDatabase extends MySQL {
         }
         return offlineProxyPlayers;
     }
-
-
 
     @Override
     public void connect() {

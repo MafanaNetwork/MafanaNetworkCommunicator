@@ -459,7 +459,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public List<ProxyPlayer> getAllConnectedPlayerSync() {
         List<ProxyPlayer> proxyPlayers = new ArrayList<>();
         try {
-            List<String> proxyString = sqlGetter.getAllString(new DatabaseValue("ONLINE_PLAYERS"));
+            List<String> proxyString = sqlGetter.getAllStringSync(new DatabaseValue("ONLINE_PLAYERS"));
 
             if (proxyString != null) {
                 Gson gson = new Gson();
@@ -480,10 +480,10 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public List<Server> getAllServerSync() {
         List<Server> servers = new ArrayList<>();
         try {
-            List<UUID> uuids = sqlGetter.getAllUUID(new DatabaseValue("UUID"));
-            List<String> serverNames = sqlGetter.getAllString(new DatabaseValue("SERVER_NAME"));
-            List<String> serverValues = sqlGetter.getAllString(new DatabaseValue("SERVER_VALUES"));
-            List<String> serverNicknames = sqlGetter.getAllString(new DatabaseValue("SERVER_NICKNAME"));
+            List<UUID> uuids = sqlGetter.getAllUUIDSync(new DatabaseValue("UUID"));
+            List<String> serverNames = sqlGetter.getAllStringSync(new DatabaseValue("SERVER_NAME"));
+            List<String> serverValues = sqlGetter.getAllStringSync(new DatabaseValue("SERVER_VALUES"));
+            List<String> serverNicknames = sqlGetter.getAllStringSync(new DatabaseValue("SERVER_NICKNAME"));
 
             for (int i = 0; i < uuids.size(); i++) {
                 UUID uuid = uuids.get(i);
