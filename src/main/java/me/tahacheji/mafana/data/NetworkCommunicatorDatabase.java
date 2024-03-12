@@ -49,7 +49,6 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
 
-
     public CompletableFuture<Server> getCombinedServerFromNickNameAsync(String x) {
         return getAllServersAsync().thenApply(servers -> {
             String serverName = "NULL";
@@ -116,7 +115,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
                     Gson gson = new Gson();
 
                     List<ProxyPlayer> onlinePlayers = getAllConnectedPlayersAsync(uuid).join();
-                    List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
+                    List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {
+                    }.getType());
 
                     Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
                     servers.add(server);
@@ -241,10 +241,12 @@ public class NetworkCommunicatorDatabase extends MySQL {
             return null;
         });
     }
+
     public CompletableFuture<List<NetworkTask>> getAllNetworkTasksAsync(UUID serverId) {
         return sqlGetter.getStringAsync(serverId, new DatabaseValue("TASKS")).thenApply(tasksJson -> {
             Gson gson = new Gson();
-            return gson.fromJson(tasksJson, new TypeToken<List<NetworkTask>>() {}.getType());
+            return gson.fromJson(tasksJson, new TypeToken<List<NetworkTask>>() {
+            }.getType());
         });
     }
 
@@ -271,13 +273,13 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
 
-
     public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync() {
         return sqlGetter.getAllStringAsync(new DatabaseValue("ONLINE_PLAYERS")).thenApply(proxyStringList -> {
             List<ProxyPlayer> proxyPlayers = new ArrayList<>();
             Gson gson = new Gson();
             for (String proxyString : proxyStringList) {
-                List<ProxyPlayer> proxyPlayer = gson.fromJson(proxyString, new TypeToken<List<ProxyPlayer>>() {}.getType());
+                List<ProxyPlayer> proxyPlayer = gson.fromJson(proxyString, new TypeToken<List<ProxyPlayer>>() {
+                }.getType());
                 if (proxyPlayer != null) {
                     proxyPlayers.addAll(proxyPlayer);
                 }
@@ -434,7 +436,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public CompletableFuture<List<String>> getAllServerValuesAsync(UUID serverId) {
         return sqlGetter.getStringAsync(serverId, new DatabaseValue("SERVER_VALUES")).thenApply(tasksJson -> {
             Gson gson = new Gson();
-            return gson.fromJson(tasksJson, new TypeToken<List<String>>() {}.getType());
+            return gson.fromJson(tasksJson, new TypeToken<List<String>>() {
+            }.getType());
         });
     }
 
@@ -464,7 +467,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
             if (proxyString != null) {
                 Gson gson = new Gson();
                 for (String s : proxyString) {
-                    List<ProxyPlayer> proxyPlayer = gson.fromJson(s, new TypeToken<List<ProxyPlayer>>() {}.getType());
+                    List<ProxyPlayer> proxyPlayer = gson.fromJson(s, new TypeToken<List<ProxyPlayer>>() {
+                    }.getType());
 
                     if (proxyPlayer != null) {
                         proxyPlayers.addAll(proxyPlayer);
@@ -494,7 +498,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
                 Gson gson = new Gson();
 
                 List<ProxyPlayer> onlinePlayers = getAllConnectedPlayerSync(uuid);
-                List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {}.getType());
+                List<String> serverValuesList = gson.fromJson(serverValuesJson, new TypeToken<List<String>>() {
+                }.getType());
 
                 Server server = new Server(serverName, onlinePlayers, serverValuesList, serverNickname);
                 servers.add(server);
@@ -507,8 +512,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
     public List<ProxyPlayer> getAllConnectedPlayerSync(UUID serverID) {
         List<ProxyPlayer> proxyPlayers = new ArrayList<>();
-        for(ProxyPlayer proxyPlayer : getAllConnectedPlayerSync()) {
-            if(proxyPlayer.getServerID().equals(serverID)) {
+        for (ProxyPlayer proxyPlayer : getAllConnectedPlayerSync()) {
+            if (proxyPlayer.getServerID().equals(serverID)) {
                 proxyPlayers.add(proxyPlayer);
             }
         }
@@ -517,8 +522,8 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
     public ProxyPlayer getProxyPlayer(String name) {
         ProxyPlayer player = null;
-        for(ProxyPlayer offlineProxyPlayer : getAllConnectedPlayerSync()) {
-            if(offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
+        for (ProxyPlayer offlineProxyPlayer : getAllConnectedPlayerSync()) {
+            if (offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
                 player = offlineProxyPlayer;
             }
         }
@@ -526,20 +531,17 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
 
-
     public Server getServerFromID(String x) {
-        for(Server server : getAllServerSync()) {
-            if(server.getServerID().equalsIgnoreCase(x)) {
+        for (Server server : getAllServerSync()) {
+            if (server.getServerID().equalsIgnoreCase(x)) {
                 return server;
             }
         }
         return null;
     }
 
-    @Override
     public void connect() {
-        super.connect();
-        if (this.isConnected()) sqlGetter.createTable("mafana_network_communicator",
+        sqlGetter.createTable("mafana_network_communicator",
                 new DatabaseValue("SERVER_NAME", ""),
                 new DatabaseValue("ONLINE_PLAYERS", ""),
                 new DatabaseValue("SERVER_VALUES", ""),

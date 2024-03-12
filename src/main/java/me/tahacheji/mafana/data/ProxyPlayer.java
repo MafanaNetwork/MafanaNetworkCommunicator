@@ -72,6 +72,14 @@ public class ProxyPlayer {
         return MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
     }
 
+    public CompletableFuture<Void> sendMessages(String... messages) {
+        CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+        for (String message : messages) {
+            future = future.thenComposeAsync(v -> sendMessage(message));
+        }
+        return future;
+    }
+
     public CompletableFuture<Void> preformCommand(String command) {
         NetworkTask networkTask = new NetworkTask(Task.PLAYER_PREFORM_COMMAND.toString(), getServerName(), getPlayer().getUniqueId().toString(), command);
         return MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);

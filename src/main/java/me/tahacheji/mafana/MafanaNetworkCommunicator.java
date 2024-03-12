@@ -1,5 +1,6 @@
 package me.tahacheji.mafana;
 
+//import me.tahacheji.mafana.commandExecutor.CommandHandler;
 import me.tahacheji.mafana.commandExecutor.CommandHandler;
 import me.tahacheji.mafana.data.*;
 import me.tahacheji.mafana.event.PlayerJoin;
@@ -11,6 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public final class MafanaNetworkCommunicator extends JavaPlugin {
 
@@ -43,18 +45,19 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        networkCommunicatorDatabase.disconnect();
-        playerDatabase.disconnect();
+        networkCommunicatorDatabase.close();
+        playerDatabase.close();
         this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
     }
 
     private void executeNetworkTasks() {
         MafanaNetworkCommunicator pluginInstance = MafanaNetworkCommunicator.getInstance();
         UUID serverId = pluginInstance.getServerId();
-        networkCommunicatorDatabase.getAllNetworkTasksAsync(serverId).thenAccept(tasks -> {
+        networkCommunicatorDatabase.getAllNetworkTasksAsync(serverId).thenAcceptAsync(tasks -> {
             if (tasks != null) {
+                CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
                 for (NetworkTask task : tasks) {
-                    Bukkit.getScheduler().runTask(pluginInstance, () -> {
+                    future = future.thenRunAsync(() -> {
                         if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.CONSOLE_PREFORM_COMMAND))) {
                             Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), task.getTask());
                         } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.PLAYER_PREFORM_COMMAND))) {
@@ -68,15 +71,17 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
                                 player.sendMessage(task.getTask());
                             }
                         }
+                        networkCommunicatorDatabase.removeNetworkTask(serverId, task.getTaskID()).join();
                     });
-                    networkCommunicatorDatabase.removeNetworkTask(serverId, task.getTaskID()).join(); // Wait for completion
                 }
+                future.join();
             }
         }).exceptionally(e -> {
             e.printStackTrace();
             return null;
         });
     }
+
 
     public void preformConsoleCommand(String server, String command) {
         NetworkTask networkTask = new NetworkTask(Task.CONSOLE_PREFORM_COMMAND.toString(), server, command);

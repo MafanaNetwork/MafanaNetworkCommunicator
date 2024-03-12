@@ -87,6 +87,16 @@ public class RegisterServerCommand {
                 });
     }
 
+    @Command(names = "mnc test", permission = "mafana.admin", playerOnly = true)
+    public void test(CommandSender sender) {
+        Player player = (Player) sender;
+        MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().getProxyPlayerAsync(player.getUniqueId()).thenComposeAsync(proxyPlayer -> {
+            return proxyPlayer.sendMessages("test1", ChatColor.GOLD + "test2");
+        });
+    }
+
+
+
 
 
 

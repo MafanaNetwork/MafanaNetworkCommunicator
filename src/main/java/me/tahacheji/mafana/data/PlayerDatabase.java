@@ -42,7 +42,7 @@ public class PlayerDatabase extends MySQL {
                 });
     }
     public CompletableFuture<OfflineProxyPlayer> getOfflineProxyPlayerAsync(String name) {
-        return getAllOfflineProxyPlayersAsync().thenApply(offlineProxyPlayers -> {
+        return getAllOfflineProxyPlayersAsync().thenApplyAsync(offlineProxyPlayers -> {
             for (OfflineProxyPlayer offlineProxyPlayer : offlineProxyPlayers) {
                 if (offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
                     return offlineProxyPlayer;
@@ -54,14 +54,14 @@ public class PlayerDatabase extends MySQL {
 
 
     public CompletableFuture<OfflineProxyPlayer> getOfflineProxyPlayerAsync(UUID uuid) {
-        return sqlGetter.getStringAsync(uuid, new DatabaseValue("OFFLINE_PROXY_PLAYER")).thenApply(x -> {
+        return sqlGetter.getStringAsync(uuid, new DatabaseValue("OFFLINE_PROXY_PLAYER")).thenApplyAsync(x -> {
             Gson gson = new Gson();
             return gson.fromJson(x, new TypeToken<OfflineProxyPlayer>() {}.getType());
         });
     }
 
     public CompletableFuture<List<OfflineProxyPlayer>> getAllOfflineProxyPlayersAsync() {
-        return sqlGetter.getAllStringAsync(new DatabaseValue("OFFLINE_PROXY_PLAYER")).thenApply(offlinePlayerStrings -> {
+        return sqlGetter.getAllStringAsync(new DatabaseValue("OFFLINE_PROXY_PLAYER")).thenApplyAsync(offlinePlayerStrings -> {
             List<OfflineProxyPlayer> offlineProxyPlayers = new ArrayList<>();
             if (offlinePlayerStrings != null) {
                 Gson gson = new Gson();
@@ -79,7 +79,7 @@ public class PlayerDatabase extends MySQL {
 
 
     public CompletableFuture<Void> addPlayerValue(OfflinePlayer player, String value) {
-        return getAllPlayerValuesAsync(player).thenCompose(values -> {
+        return getAllPlayerValuesAsync(player).thenComposeAsync(values -> {
             List<String> x = new ArrayList<>();
             if (values != null) {
                 x.addAll(values);
@@ -93,7 +93,7 @@ public class PlayerDatabase extends MySQL {
     }
 
     public CompletableFuture<Void> removePlayerValue(OfflinePlayer player, String value) {
-        return getAllPlayerValuesAsync(player).thenCompose(values -> {
+        return getAllPlayerValuesAsync(player).thenComposeAsync(values -> {
             String m = null;
             List<String> x = new ArrayList<>();
             if (values != null) {
@@ -115,7 +115,7 @@ public class PlayerDatabase extends MySQL {
 
 
     public CompletableFuture<Boolean> hasPlayerValueAsync(OfflinePlayer player, String value) {
-        return getAllPlayerValuesAsync(player).thenApply(values -> {
+        return getAllPlayerValuesAsync(player).thenApplyAsync(values -> {
             for (String s : values) {
                 if (s.equalsIgnoreCase(value)) {
                     return true;
@@ -174,10 +174,9 @@ public class PlayerDatabase extends MySQL {
         return offlineProxyPlayers;
     }
 
-    @Override
+
     public void connect() {
-        super.connect();
-        if (this.isConnected()) sqlGetter.createTable("mafana_player_database",
+        sqlGetter.createTable("mafana_player_database",
                 new DatabaseValue("PLAYER_NAME", ""),
                 new DatabaseValue("OFFLINE_PROXY_PLAYER", ""),
                 new DatabaseValue("PLAYER_VALUES", ""));
