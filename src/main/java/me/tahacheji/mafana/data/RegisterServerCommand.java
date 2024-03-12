@@ -91,7 +91,7 @@ public class RegisterServerCommand {
     public void test(CommandSender sender) {
         Player player = (Player) sender;
         MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().getProxyPlayerAsync(player.getUniqueId()).thenComposeAsync(proxyPlayer -> {
-            return proxyPlayer.sendMessages("test1", ChatColor.GOLD + "test2");
+            return proxyPlayer.sendMessages(ChatColor.WHITE + "test1", ChatColor.GOLD + "test2");
         });
     }
 
