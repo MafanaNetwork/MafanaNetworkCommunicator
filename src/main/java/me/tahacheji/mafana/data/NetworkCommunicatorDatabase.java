@@ -212,7 +212,6 @@ public class NetworkCommunicatorDatabase extends MySQL {
                     return getServerFromUUIDAsync(serverId).thenComposeAsync(serverName -> {
                         UUID playerUUID = player.getUniqueId();
                         ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName.getServerID());
-                        MafanaNetworkCommunicator.getInstance().getLogger().log(Level.INFO, x.getServerID() + " " + x.getServerName());
                         return getAllConnectedPlayersAsync(serverId).thenAccept(m -> {
                             m.add(x);
                             setAllConnectedPlayersAsync(serverId, m).join();
