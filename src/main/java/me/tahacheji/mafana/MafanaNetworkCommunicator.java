@@ -1,6 +1,7 @@
 package me.tahacheji.mafana;
 
 //import me.tahacheji.mafana.commandExecutor.CommandHandler;
+
 import me.tahacheji.mafana.commandExecutor.CommandHandler;
 import me.tahacheji.mafana.data.*;
 import me.tahacheji.mafana.event.PlayerJoin;
@@ -59,12 +60,16 @@ public final class MafanaNetworkCommunicator extends JavaPlugin {
                 for (NetworkTask task : tasks) {
                     future = future.thenRunAsync(() -> {
                         if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.CONSOLE_PREFORM_COMMAND))) {
-                            Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), task.getTask());
+                            Bukkit.getScheduler().runTask(MafanaNetworkCommunicator.getInstance(), () -> {
+                                Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), task.getTask());
+                            });
                         } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.PLAYER_PREFORM_COMMAND))) {
-                            Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
-                            if (player != null) {
-                                player.performCommand(task.getTask());
-                            }
+                            Bukkit.getScheduler().runTask(MafanaNetworkCommunicator.getInstance(), () -> {
+                                Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
+                                if (player != null) {
+                                    player.performCommand(task.getTask());
+                                }
+                            });
                         } else if (task.getTaskID().equalsIgnoreCase(String.valueOf(Task.SENDING_PLAYER_MESSAGE))) {
                             Player player = Bukkit.getPlayer(UUID.fromString(task.getPlayerUUID()));
                             if (player != null) {

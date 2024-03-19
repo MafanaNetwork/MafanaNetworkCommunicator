@@ -31,6 +31,10 @@ public class ProxyPlayer {
         this.serverName = serverName;
     }
 
+    public CompletableFuture<OfflineProxyPlayer> getOfflineProxyPlayer() {
+        return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().getOfflineProxyPlayerAsync(UUID.fromString(playerUUID));
+    }
+
     public OfflinePlayer getPlayer() {
         return Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
     }
@@ -59,12 +63,36 @@ public class ProxyPlayer {
         return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().hasPlayerValueAsync(getPlayer(), value);
     }
 
+    public CompletableFuture<Boolean> hasPlayerValues(String... values) {
+        CompletableFuture<Boolean> future = CompletableFuture.completedFuture(null);
+        for (String x : values) {
+            future = future.thenComposeAsync(v -> hasPlayerValue(x));
+        }
+        return future;
+    }
+
     public CompletableFuture<Void> removePlayerValue(String value) {
         return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().removePlayerValue(getPlayer(), value);
     }
 
+    public CompletableFuture<Void> removePlayerValues(String... values) {
+        CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+        for (String x : values) {
+            future = future.thenComposeAsync(v -> removePlayerValue(x));
+        }
+        return future;
+    }
+
     public CompletableFuture<Void> addPlayerValue(String value) {
         return MafanaNetworkCommunicator.getInstance().getPlayerDatabase().addPlayerValue(getPlayer(), value);
+    }
+
+    public CompletableFuture<Void> addPlayerValues(String... values) {
+        CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+        for (String x : values) {
+            future = future.thenComposeAsync(v -> addPlayerValue(x));
+        }
+        return future;
     }
 
     public CompletableFuture<Void> sendMessage(String message) {
@@ -83,6 +111,14 @@ public class ProxyPlayer {
     public CompletableFuture<Void> preformCommand(String command) {
         NetworkTask networkTask = new NetworkTask(Task.PLAYER_PREFORM_COMMAND.toString(), getServerName(), getPlayer().getUniqueId().toString(), command);
         return MafanaNetworkCommunicator.getInstance().getNetworkCommunicatorDatabase().addNetworkTask(getServerID(), networkTask);
+    }
+
+    public CompletableFuture<Void> preformCommands(String... commands) {
+        CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+        for (String x : commands) {
+            future = future.thenComposeAsync(v -> preformCommand(x));
+        }
+        return future;
     }
 
     public void connectPlayerToServer(String serverName) {

@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public class NetworkCommunicatorDatabase extends MySQL {
     SQLGetter sqlGetter = new SQLGetter(this);
@@ -24,7 +25,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public CompletableFuture<Void> registerServer(String serverName, String nickname) {
         UUID uuid = MafanaNetworkCommunicator.getInstance().getServerId();
 
-        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+        return sqlGetter.existsAsync(uuid).thenComposeAsync(exists -> {
             if (!exists) {
                 return registerServerAsync(uuid, serverName, nickname);
             }
@@ -50,7 +51,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
 
     public CompletableFuture<Server> getCombinedServerFromNickNameAsync(String x) {
-        return getAllServersAsync().thenApply(servers -> {
+        return getAllServersAsync().thenApplyAsync(servers -> {
             String serverName = "NULL";
             List<ProxyPlayer> onlinePlayers = new ArrayList<>();
             List<String> serverValues = new ArrayList<>();
@@ -69,7 +70,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Server> getRandomServerFromNickNameAsync(String x) {
-        return getAllServersAsync().thenApply(servers -> {
+        return getAllServersAsync().thenApplyAsync(servers -> {
             for (Server server : servers) {
                 if (server.getServerNickName().equalsIgnoreCase(x)) {
                     return server;
@@ -83,7 +84,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Server> getServerFromIDAsync(String x) {
-        return getAllServersAsync().thenApply(servers -> {
+        return getAllServersAsync().thenApplyAsync(servers -> {
             for (Server server : servers) {
                 if (server.getServerID().equalsIgnoreCase(x)) {
                     return server;
@@ -130,7 +131,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
 
     public CompletableFuture<Void> clearAllPlayer(UUID uuid) {
-        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+        return sqlGetter.existsAsync(uuid).thenComposeAsync(exists -> {
             if (exists) {
                 return sqlGetter.setStringAsync(new DatabaseValue("ONLINE_PLAYERS", uuid, ""))
                         .exceptionally(e -> {
@@ -171,7 +172,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Void> clearAllTasks(UUID uuid) {
-        return sqlGetter.existsAsync(uuid).thenCompose(exists -> {
+        return sqlGetter.existsAsync(uuid).thenComposeAsync(exists -> {
             if (exists) {
                 return sqlGetter.setStringAsync(new DatabaseValue("TASKS", uuid, ""))
                         .exceptionally(e -> {
@@ -206,11 +207,12 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public CompletableFuture<Void> registerOnlinePlayer(Player player) {
         UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
         if (serverId != null) {
-            return sqlGetter.existsAsync(serverId).thenCompose(exists -> {
+            return sqlGetter.existsAsync(serverId).thenComposeAsync(exists -> {
                 if (exists) {
-                    return getServerNickNameAsync(serverId).thenCompose(serverName -> {
+                    return getServerFromUUIDAsync(serverId).thenComposeAsync(serverName -> {
                         UUID playerUUID = player.getUniqueId();
-                        ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName);
+                        ProxyPlayer x = new ProxyPlayer(playerUUID.toString(), player.getName(), serverId.toString(), serverName.getServerID());
+                        MafanaNetworkCommunicator.getInstance().getLogger().log(Level.INFO, x.getServerID() + " " + x.getServerName());
                         return getAllConnectedPlayersAsync(serverId).thenAccept(m -> {
                             m.add(x);
                             setAllConnectedPlayersAsync(serverId, m).join();
@@ -228,7 +230,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
 
     public CompletableFuture<Void> addNetworkTask(UUID serverId, NetworkTask task) {
-        return getAllNetworkTasksAsync(serverId).thenCompose(tasks -> {
+        return getAllNetworkTasksAsync(serverId).thenComposeAsync(tasks -> {
             if (tasks != null) {
                 tasks.add(task);
             } else {
@@ -243,7 +245,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<List<NetworkTask>> getAllNetworkTasksAsync(UUID serverId) {
-        return sqlGetter.getStringAsync(serverId, new DatabaseValue("TASKS")).thenApply(tasksJson -> {
+        return sqlGetter.getStringAsync(serverId, new DatabaseValue("TASKS")).thenApplyAsync(tasksJson -> {
             Gson gson = new Gson();
             return gson.fromJson(tasksJson, new TypeToken<List<NetworkTask>>() {
             }.getType());
@@ -260,7 +262,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Void> removeNetworkTask(UUID serverId, String taskId) {
-        return getAllNetworkTasksAsync(serverId).thenCompose(tasks -> {
+        return getAllNetworkTasksAsync(serverId).thenComposeAsync(tasks -> {
             if (tasks != null) {
                 tasks.removeIf(task -> task.getTaskID().equalsIgnoreCase(taskId));
                 return setNetworkTasksAsync(serverId, tasks);
@@ -274,7 +276,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
 
     public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync() {
-        return sqlGetter.getAllStringAsync(new DatabaseValue("ONLINE_PLAYERS")).thenApply(proxyStringList -> {
+        return sqlGetter.getAllStringAsync(new DatabaseValue("ONLINE_PLAYERS")).thenApplyAsync(proxyStringList -> {
             List<ProxyPlayer> proxyPlayers = new ArrayList<>();
             Gson gson = new Gson();
             for (String proxyString : proxyStringList) {
@@ -293,7 +295,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
 
 
     public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(String name) {
-        return getAllConnectedPlayersAsync().thenApply(players -> {
+        return getAllConnectedPlayersAsync().thenApplyAsync(players -> {
             for (ProxyPlayer offlineProxyPlayer : players) {
                 if (offlineProxyPlayer.getPlayerName().equalsIgnoreCase(name)) {
                     return offlineProxyPlayer;
@@ -309,10 +311,10 @@ public class NetworkCommunicatorDatabase extends MySQL {
     public CompletableFuture<Void> unregisterOnlinePlayer(Player player) {
         UUID serverId = MafanaNetworkCommunicator.getInstance().getServerId();
         if (serverId != null) {
-            return sqlGetter.existsAsync(serverId).thenCompose(exists -> {
+            return sqlGetter.existsAsync(serverId).thenComposeAsync(exists -> {
                 if (exists) {
                     UUID playerUUID = player.getUniqueId();
-                    return getAllConnectedPlayersAsync(serverId).thenCompose(players -> {
+                    return getAllConnectedPlayersAsync(serverId).thenComposeAsync(players -> {
                         ProxyPlayer playerToRemove = null;
                         for (ProxyPlayer proxyPlayer : players) {
                             if (proxyPlayer.getPlayer().getUniqueId().equals(playerUUID)) {
@@ -337,7 +339,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync(String serverName) {
-        return getAllConnectedPlayersAsync().thenApply(players -> {
+        return getAllConnectedPlayersAsync().thenApplyAsync(players -> {
             List<ProxyPlayer> proxyPlayers = new ArrayList<>();
             for (ProxyPlayer proxyPlayer : players) {
                 if (proxyPlayer.getServerName().equalsIgnoreCase(serverName)) {
@@ -352,7 +354,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<List<ProxyPlayer>> getAllConnectedPlayersAsync(UUID serverID) {
-        return getAllConnectedPlayersAsync().thenApply(players -> {
+        return getAllConnectedPlayersAsync().thenApplyAsync(players -> {
             List<ProxyPlayer> proxyPlayers = new ArrayList<>();
             for (ProxyPlayer proxyPlayer : players) {
                 if (proxyPlayer.getServerID().equals(serverID)) {
@@ -367,7 +369,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(OfflinePlayer player) {
-        return getAllConnectedPlayersAsync().thenApply(players -> {
+        return getAllConnectedPlayersAsync().thenApplyAsync(players -> {
             for (ProxyPlayer proxyPlayer : players) {
                 if (proxyPlayer.getPlayer().getUniqueId().equals(player.getUniqueId())) {
                     return proxyPlayer;
@@ -381,7 +383,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<ProxyPlayer> getProxyPlayerAsync(UUID uuid) {
-        return getAllConnectedPlayersAsync().thenApply(players -> {
+        return getAllConnectedPlayersAsync().thenApplyAsync(players -> {
             for (ProxyPlayer proxyPlayer : players) {
                 if (proxyPlayer.getPlayer().getUniqueId().equals(uuid)) {
                     return proxyPlayer;
@@ -395,7 +397,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Void> addServerValueAsync(UUID serverId, String value) {
-        return getAllServerValuesAsync(serverId).thenAccept(serverValues -> {
+        return getAllServerValuesAsync(serverId).thenAcceptAsync(serverValues -> {
             if (serverValues != null) {
                 serverValues.add(value);
             } else {
@@ -410,7 +412,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Void> removeServerValueAsync(UUID serverId, String value) {
-        return getAllServerValuesAsync(serverId).thenAccept(serverValues -> {
+        return getAllServerValuesAsync(serverId).thenAcceptAsync(serverValues -> {
             if (serverValues != null) {
                 serverValues.removeIf(s -> s.equalsIgnoreCase(value));
                 setServerValuesAsync(serverId, serverValues);
@@ -422,7 +424,7 @@ public class NetworkCommunicatorDatabase extends MySQL {
     }
 
     public CompletableFuture<Boolean> hasServerValueAsync(UUID serverId, String value) {
-        return getAllServerValuesAsync(serverId).thenApply(serverValues -> {
+        return getAllServerValuesAsync(serverId).thenApplyAsync(serverValues -> {
             if (serverValues != null) {
                 return serverValues.contains(value);
             }
@@ -479,6 +481,13 @@ public class NetworkCommunicatorDatabase extends MySQL {
             e.printStackTrace();
         }
         return proxyPlayers;
+    }
+
+    public CompletableFuture<Server> getServerFromUUIDAsync(UUID uuid) {
+        return CompletableFuture.supplyAsync(() -> {
+           Server server = new Server(sqlGetter.getStringAsync(uuid, new DatabaseValue("SERVER_NAME")).join(), getAllConnectedPlayersAsync(uuid).join(), getAllServerValuesAsync(uuid).join(), getServerNickNameAsync(uuid).join());
+            return server;
+        });
     }
 
     public List<Server> getAllServerSync() {
